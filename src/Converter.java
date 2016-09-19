@@ -1,26 +1,37 @@
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Stream;
 
 public class Converter {
 
+    private static final String PREVIOUS_RESULTS_FILENAME = "previous_results.txt";
 
-    Long getBinary(int n, List<Long> allNumbers) {
+    String getBaseFibByDecimal(long n) {
         long bestNumber = 0;
-        List<Long> previousNumbers = new ArrayList<>();
+        List<Long> allFibResults = readAllFibResults();
+        List<Long> previousResults = new ArrayList<>();
         String pseudoBinaryOutput = "";
 
 
-        for (Long allNumber : allNumbers) {
-            if (allNumber <= n) {
-                bestNumber = allNumber;
-                previousNumbers.add(bestNumber);
+        if(previousResults.isEmpty()){
+            for (Long allNumber : allFibResults) {
+                if (allNumber <= n) {
+                    bestNumber = allNumber;
+                    previousResults.add(bestNumber);
+                }
             }
         }
 
+
         long output = 0;
 
-            for(int i = previousNumbers.size()-1; i >= 0; i--) {
-                long actualNumber = previousNumbers.get(i);
+            for(int i = previousResults.size()-1; i >= 0; i--) {
+                long actualNumber = previousResults.get(i);
                 if (output + actualNumber <= n) {
                     output += actualNumber;
                     pseudoBinaryOutput += "1";
@@ -29,11 +40,33 @@ public class Converter {
                 }
         }
 
-        System.out.println(pseudoBinaryOutput);
-
-        return bestNumber;
+        return pseudoBinaryOutput;
     }
-    List<Long> generate(long n) {
+
+    Long getDecimalByBaseFib(long n) {
+        String reversedNumberStr = new StringBuilder(String.valueOf(n)).reverse().toString();
+        char[] chars = reversedNumberStr.toCharArray();
+        List<Long> fibResults = readAllFibResults();
+        List<Long> outputNumbers = new ArrayList<>();
+        long result = 0;
+
+        for(int i = 0; i < chars.length; i++){
+            if(chars[i] == '1'){
+                Long number = fibResults.get(i);
+                outputNumbers.add(number);
+            }
+        }
+
+
+            for(Long number : outputNumbers){
+                result += number;
+            }
+
+
+        return result;
+    }
+
+    List<Long> generatePreviousFibResults(long n) {
         List<Long> numbers = new ArrayList<>();
 
         for (int i = 0; i < n; i++) {
@@ -42,6 +75,7 @@ public class Converter {
         }
         numbers.remove(0);
 
+        saveResultsToFile(numbers);
         return numbers;
     }
 
@@ -53,13 +87,29 @@ public class Converter {
         }
     }
 
+    private void saveResultsToFile(List<Long> numbers){
 
-    public static void main(String[] args) {
-        Converter converter = new Converter();
-        List<Long> list = converter.generate(16);
-        converter.getBinary(32, list);
-
-
+        try(  PrintWriter out = new PrintWriter(PREVIOUS_RESULTS_FILENAME)  ){
+            numbers.forEach(out::println);
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
     }
+
+    private List<Long> readAllFibResults(){
+        List<Long> results = new ArrayList<>();
+        try (Stream<String> stream = Files.lines(Paths.get(PREVIOUS_RESULTS_FILENAME))) {
+            stream.forEach(number ->{
+                long l = Long.parseLong(number);
+                results.add(l);
+            });
+        } catch (IOException e) {
+            generatePreviousFibResults(50);
+            readAllFibResults();
+        }
+
+        return results;
+    }
+
 
 }
